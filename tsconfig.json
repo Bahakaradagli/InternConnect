@@ -1,0 +1,13 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "allowJs": true,
+    "noEmit": true,
+    "allowSyntheticDefaultImports": true,  // İsteğe bağlı, esModuleInterop ile uyumlu çalışır
+    "skipLibCheck": true,  // Bu da kütüphane kontrol hatalarını engelleyebilir
+    "jsx": "react",
+    "strict": true
+  },  "include": ["functions/src/**/*.ts"],
+
+}

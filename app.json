@@ -1,0 +1,79 @@
+{
+  "expo": {
+    "owner": "bahakaradagli",
+    "name": "InternConnect",
+    "slug": "my-new-project",
+    "version": "1.1.7",
+    "orientation": "portrait",
+    "icon": "./assets/catchIt-3.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "permissions": [
+      "CAMERA",
+      "CAMERA_ROLL",
+      "NOTIFICATIONS"
+    ],
+    "ios": {
+      "buildNumber": "19",
+      "bundleIdentifier": "com.bahakaradagli.internConnect",
+      "supportsTablet": true,
+      "icon": "./assets/catchIt-3.png",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to your camera to upload photos.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to upload photos.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        },
+        "UIBackgroundModes": [
+          "remote-notification",
+          "fetch"
+        ],
+        "NSUserTrackingUsageDescription": "This app needs your permission to send push notifications.",
+        "SKAdNetworkItems": [
+          {
+            "SKAdNetworkIdentifier": "example.skadnetwork"
+          }
+        ]
+      },
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-7851172015307946~3324596592",
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "versionCode": 8,
+      "version": "1.1.7",
+      "package": "com.bahakaradagli.internConnect",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "NOTIFICATIONS"
+      ],
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-7851172015307946~3324596592"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "bd751fac-20c7-409e-a99b-7c665a02b24c"
+      }
+    },
+    "plugins": [
+      [
+        "expo-av",
+        {
+          "video": {}
+        }
+      ],
+      "expo-notifications"
+    ]
+  }
+}

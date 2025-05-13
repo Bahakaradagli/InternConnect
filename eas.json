@@ -1,0 +1,57 @@
+{
+  "cli": {
+    "version": ">=3.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "android": {
+        "buildType": "apk",
+        "developmentClient": true,
+        "distribution": "internal"
+      },
+      "ios": {
+        "simulator": true,
+        "developmentClient": true,
+        "distribution": "internal"
+      }
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk",
+        "distribution": "internal"
+      },
+      "ios": {
+        "simulator": true,
+        "distribution": "internal"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle",
+        "releaseChannel": "production",
+        "distribution": "store",
+        "autoIncrement": true
+      },
+      "ios": {
+        "releaseChannel": "production",
+        "autoIncrement": true,
+        "distribution": "store",
+        "simulator": false,
+        "developmentClient": false
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "production"
+      },
+      "ios": {
+        "appleId": "bahakaradagli@email.com",
+        "ascAppId": "6743863640"
+      }
+    }
+  }
+}
