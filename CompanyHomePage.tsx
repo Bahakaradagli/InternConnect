@@ -410,16 +410,7 @@ useFocusEffect(
           },
         ]}
       >
-        {/* Modal içeriği */}
-        <TouchableOpacity
-          style={styles.modalButton}
-          onPress={() => {
-            closeModal();
-            navigation.navigate('UserProfileScreen', { userId: selectedChat.userId });     
-          }}
-        >
-          <Text style={styles.modalButtonText}>Profili Görüntüle</Text>
-        </TouchableOpacity>
+
 
         <TouchableOpacity
           style={styles.modalButton}
@@ -428,7 +419,7 @@ useFocusEffect(
             await remove(ref(getDatabase(), `users/${userId}/chats/${selectedChat.id}`));
           }}
         >
-          <Text style={styles.modalButtonText}>Sohbeti Kendinden Sil</Text>
+          <Text style={styles.modalButtonText}>Delete Messages From You</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -444,7 +435,7 @@ useFocusEffect(
             await remove(ref(db, `chats/${selectedChat.id}`));
           }}
         >
-          <Text style={[styles.modalButtonText, { color: '#ff3b30' }]}>Arkadaşlıktan Çıkar</Text>
+          <Text style={[styles.modalButtonText, { color: '#ff3b30' }]}>Delete Friend</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -562,7 +553,7 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   modalContainer: {
-    backgroundColor: '#000',
+    backgroundColor: '#fff',
     padding: 25,
     marginBottom:10,
     borderTopLeftRadius: 20,
@@ -584,7 +575,7 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     fontSize: 16,
-    color: '#fff',
+    color: '#000',
   },
   unreadInfo: {
     color: '#C67AFF',

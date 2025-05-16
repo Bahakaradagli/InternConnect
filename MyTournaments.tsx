@@ -354,11 +354,14 @@ export default function JobsScreen() {
         />
       ) : userType === 'companies' ? (
         <FlatList
-          data={jobs
-            .filter(job => job.companyId === user?.uid) // 🔒 Sadece kendi ilanları
-            .flatMap(job =>
-              Object.values(job.jobapplications || {}).map(application => ({
+        data={jobs
+          .filter(job => job.companyId === user?.uid) // 🔒 Sadece kendi ilanları
+          .flatMap(job =>
+            Object.entries(job.jobapplications || {})
+              .filter(([_, app]: any) => !app.answer) // 🔥 Cevaplanmamış olanları al
+              .map(([userId, application]: any) => ({
                 ...application,
+                userId, // userId'yi tekrar ekliyoruz çünkü kaybolur
                 jobId: job.jobIndex,
                 companyId: job.companyId,
                 jobTitle: job.position,
@@ -366,7 +369,7 @@ export default function JobsScreen() {
                 jobLocation: job.location,
                 jobCompany: job.companyName,
               }))
-            )}
+          )}
           keyExtractor={(_, index) => index.toString()}
           renderItem={({ item }) => {
             const isExpanded = expandedCard === item.userId;
