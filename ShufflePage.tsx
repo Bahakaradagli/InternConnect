@@ -7,24 +7,26 @@ import {
   Animated,
   PanResponder,
   Dimensions,
-  TouchableOpacity
+  TouchableOpacity,
+  Modal,
+  Button
 } from 'react-native';
 import { getDatabase, ref, onValue, remove, get,set } from 'firebase/database';
 import { getAuth } from 'firebase/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native'; // 👈 navigation'ı en üste ekle
 
-
-
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function FriendRequestsScreen() {
-  const [notifications, setNotifications] = useState([]);
-  const [requests, setRequests] = useState([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
   const auth = getAuth();
   const userId = auth.currentUser?.uid;
   const [isRequestsOpen, setIsRequestsOpen] = useState(true);
-  const [suggestedUsers, setSuggestedUsers] = useState([]);
+  const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
+  const [showContentModal, setShowContentModal] = useState(false);
+  const [modalContent, setModalContent] = useState<any>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -72,46 +74,93 @@ export default function FriendRequestsScreen() {
       setSuggestedUsers(selected);
     });
   }, [userId, requests]);
+
   useEffect(() => {
     if (!userId) return;
-  
     const db = getDatabase();
     const notiRef = ref(db, `users/${userId}/notifications`);
-  
+    const adminMsgRef = ref(db, `users/${userId}/adminMessage`);
+    const adminWarnRef = ref(db, `users/${userId}/adminWarnings`);
+
+    // Normal notifications
     onValue(notiRef, (snapshot) => {
       const data = snapshot.val();
+      let parsed: any[] = [];
       if (data) {
-        const parsed = Object.entries(data).map(([id, value]: [string, any]) => ({
+        parsed = Object.entries(data).map(([id, value]: [string, any]) => ({
           id,
           ...value,
         }));
-        // createdAt'e göre sıralayalım (en yeni en üstte)
-        const sorted = parsed.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setNotifications(sorted);
-      } else {
-        setNotifications([]);
       }
+      // Admin Message
+      get(adminMsgRef).then((adminMsgSnap) => {
+        if (adminMsgSnap.exists()) {
+          const msg = adminMsgSnap.val();
+          parsed.push({
+            id: 'adminMessage',
+            fromName: 'Admin',
+            text: msg.message,
+            timestamp: msg.timestamp || Date.now(),
+          });
+        }
+        // Admin Warnings
+        get(adminWarnRef).then((adminWarnSnap) => {
+          if (adminWarnSnap.exists()) {
+            const warnings = Object.values(adminWarnSnap.val());
+            warnings.forEach((warn: any, idx: number) => {
+              parsed.push({
+                id: `adminWarning_${idx}`,
+                fromName: 'Admin',
+                text: warn.message,
+                timestamp: warn.timestamp || Date.now(),
+              });
+            });
+          }
+          // createdAt veya timestamp'e göre sıralayalım (en yeni en üstte)
+          const sorted = parsed.sort((a, b) => (b.timestamp || b.createdAt) - (a.timestamp || a.createdAt));
+          setNotifications(sorted);
+        });
+      });
     });
   }, [userId]);
 
-  const NotificationCard = ({ item }) => (
-    <View style={styles.notificationCard}>
-      <Text style={styles.notificationTitle}>
-        {item.fromName || 'Someone'} {/* kimden geldi */}
-      </Text>
-  
-      <Text style={styles.notificationDescription}>
-        {item.text || 'sent you a notification.'} {/* bildirim metni */}
-      </Text>
-  
-      <Text style={styles.notificationTime}>
-        {new Date(item.timestamp).toLocaleString()} {/* düzgün tarih */}
-      </Text>
-    </View>
-  );
-  const SuggestedUserCard = ({ item }) => {
-    const navigation = useNavigation(); // 👑 navigation'ı burada çekiyoruz
-  
+  const NotificationCard = ({ item }: { item: any }) => {
+    const isAdmin = item.fromName === 'Admin';
+    const isPostWarning = item.id?.toString().startsWith('adminWarning_') && item.targetId && item.type === 'post';
+    const handlePress = () => {
+      if (isPostWarning && item.content) {
+        setModalContent(item.content);
+        setShowContentModal(true);
+      }
+    };
+    return (
+      <TouchableOpacity
+        activeOpacity={isPostWarning ? 0.7 : 1}
+        onPress={handlePress}
+        disabled={!isPostWarning}
+      >
+        <View style={[styles.notificationCard, isAdmin && { borderLeftColor: '#d32f2f', backgroundColor: '#ffeaea', borderWidth: 2 }]}> 
+          <Text style={[styles.notificationTitle, isAdmin && { color: '#d32f2f' }]}>
+            {item.fromName || 'Someone'}
+          </Text>
+          <Text style={styles.notificationDescription}>
+            {item.text || 'sent you a notification.'}
+          </Text>
+          {isPostWarning && (
+            <Text style={{ color: '#d32f2f', fontWeight: 'bold', marginTop: 4 }}>
+              Uyarı yapılan post: {item.content?.title ? item.content.title : 'Post Bilgisi Yok'}
+            </Text>
+          )}
+          <Text style={styles.notificationTime}>
+            {new Date(item.timestamp).toLocaleString()}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const SuggestedUserCard = ({ item }: { item: any }) => {
+    const navigation: any = useNavigation();
     return (
       <TouchableOpacity
         style={[styles.card, { backgroundColor: '#000', shadowColor:'#2B003D',    shadowOffset: { width: 1, height: 1 },
@@ -221,46 +270,64 @@ export default function FriendRequestsScreen() {
   };
 
   return (
-<View style={styles.container}>
-  {/* 📁 Gelen İstekler Başlığı */}
-  <TouchableOpacity
-  onPress={() => setIsRequestsOpen(!isRequestsOpen)}
-  style={styles.sectionHeaderRow}
->
-  <Text style={styles.header}>Requests</Text>
-  <Ionicons
-    name={isRequestsOpen ? 'chevron-down' : 'chevron-forward'}
-    size={20}
-    color="#000"
-  />
-</TouchableOpacity>
+    <View style={styles.container}>
+      {/* 📁 Gelen İstekler Başlığı */}
+      <TouchableOpacity
+        onPress={() => setIsRequestsOpen(!isRequestsOpen)}
+        style={styles.sectionHeaderRow}
+      >
+        <Text style={styles.header}>Requests</Text>
+        <Ionicons
+          name={isRequestsOpen ? 'chevron-down' : 'chevron-forward'}
+          size={20}
+          color="#000"
+        />
+      </TouchableOpacity>
 
-  {/* 📨 Gelen İstek Kartları */}
-  {isRequestsOpen && (
-    requests.length > 0 ? (
-      <FlatList
-        data={requests}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <RequestCard item={item} />}
-      />
-    ) : (
-      <Text style={styles.noRequests}>No New Requests</Text>
-    )
-  )}
+      {/* 📨 Gelen İstek Kartları */}
+      {isRequestsOpen && (
+        requests.length > 0 ? (
+          <FlatList
+            data={requests}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => <RequestCard item={item} />}
+          />
+        ) : (
+          <Text style={styles.noRequests}>No New Requests</Text>
+        )
+      )}
 
-<Text style={styles.header}>Notifications</Text>
-{notifications.length > 0 ? (
-  <FlatList
-    data={notifications}
-    keyExtractor={(item) => item.id}
-    renderItem={({ item }) => <NotificationCard item={item} />}
-  />
-) : (
-  <Text style={styles.noRequests}>No Notifications</Text>
-)}
+      <Text style={styles.header}>Notifications</Text>
+      {notifications.length > 0 ? (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <NotificationCard item={item} />}
+        />
+      ) : (
+        <Text style={styles.noRequests}>No Notifications</Text>
+      )}
 
-
-</View>
+      <Modal
+        visible={showContentModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowContentModal(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 16, maxWidth: 320 }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#d32f2f', marginBottom: 8 }}>Uyarı Yapılan Post</Text>
+            <Text style={{ color: '#333', marginBottom: 8 }}>
+              {modalContent?.title ? `Başlık: ${modalContent.title}` : ''}
+            </Text>
+            <Text style={{ color: '#333', marginBottom: 16 }}>
+              {modalContent?.description ? `Açıklama: ${modalContent.description}` : ''}
+            </Text>
+            <Button title="Kapat" onPress={() => setShowContentModal(false)} color="#d32f2f" />
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -276,54 +343,24 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
     borderLeftWidth: 4,
-    borderLeftColor: '#628EA0', // isteğe göre bildirim türüne göre renk değişebilir
+    borderLeftColor: '#628EA0',
+    borderWidth: 1,
   },
-  
   notificationTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
   },
-  
   notificationDescription: {
     fontSize: 14,
     color: '#555',
     marginBottom: 4,
   },
-  
   notificationTime: {
     fontSize: 12,
     color: '#999',
     textAlign: 'right',
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    marginTop: 45,
-    marginBottom: 8,
-  },
-  noRequests: {
-    fontSize: 17,
-    color: '#999',
-    marginTop: 15,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: 20,
-    paddingHorizontal: 16,
-  },
-  header: {
-    fontSize: 17,
-    color: '#000',
-    marginTop:15,
-    marginLeft:14,
-    marginBottom: 16,
   },
   card: {
     backgroundColor: '#fff',
@@ -339,5 +376,33 @@ const styles = StyleSheet.create({
   name: {
     color: '#000',
     fontSize: 18,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingTop: 20,
+    paddingHorizontal: 16,
+  },
+  header: {
+    fontSize: 17,
+    color: '#000',
+    marginTop: 15,
+    marginLeft: 14,
+    marginBottom: 16,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    marginTop: 45,
+    marginBottom: 8,
+  },
+  noRequests: {
+    fontSize: 17,
+    color: '#999',
+    marginTop: 15,
+    textAlign: 'center',
+    marginBottom: 16,
   },
 });

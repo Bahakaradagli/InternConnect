@@ -25,6 +25,7 @@ import ProfileScreen from './ProfileScreen';
 import GraphScreen from './GraphScreen';
 import ShufflePage from './ShufflePage';
 import AdminSide from './adminSide';
+import CreateTestForCandidate from './createTestForCandidate'; 
 
 import TopicsScreen from './TopicsScreen';
 
@@ -224,6 +225,11 @@ export default function App() {
                   ),
                 }}
               />
+              <Stack.Screen
+  name="CreateTestForCandidate"
+  component={CreateTestForCandidate}
+  options={{ headerShown: false }}
+/>
               <Stack.Screen
                 name="UserProfileScreen"
                 component={UserProfilScreen}

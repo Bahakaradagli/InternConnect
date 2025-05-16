@@ -1724,6 +1724,18 @@ const deleteAboutText = async () => {
   showsHorizontalScrollIndicator={false}
 />
 
+<Text style={styles.formLabel2}>Google Forms Link for Test</Text>
+<TextInput
+  style={styles.inputInsideBox}
+  value={jobOpportunities[jobOpportunities.length - 1].formsLink}
+  onChangeText={(text) => {
+    const updated = [...jobOpportunities];
+    updated[jobOpportunities.length - 1].formsLink = text;
+    setJobOpportunities(updated);
+  }}
+  placeholder="https://forms.gle/A2NLxTh3xdu6ywW6A"
+/>
+
           <TouchableOpacity onPress={saveJobs} style={styles.saveButton}>
             <Text style={styles.saveButtonText}>Save Job</Text>
           </TouchableOpacity>

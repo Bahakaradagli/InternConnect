@@ -6,18 +6,24 @@ import {
   Image,
   ActivityIndicator,
   ScrollView,
+  Modal,
+  Button,
 } from 'react-native';
-import { getDatabase, ref,remove,  get } from 'firebase/database';
+import { getDatabase, ref, remove, get } from 'firebase/database';
 import { getAuth } from 'firebase/auth';
 import { Alert } from 'react-native';
-
 
 export default function UserProfileScreen({ route }) {
   const { userId } = route.params;
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [adminMessage, setAdminMessage] = useState<any>(null);
+  const [adminWarnings, setAdminWarnings] = useState<any[]>([]);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [modalContent, setModalContent] = useState<string>('');
   const auth = getAuth();
   const currentUserId = auth.currentUser?.uid;
+
   const handleLongPressOnFilter = (collectionTitle: string) => {
     Alert.alert(
       'Filtreyi Sil',
@@ -35,7 +41,7 @@ export default function UserProfileScreen({ route }) {
               const auth = getAuth();
               const userId = auth.currentUser?.uid;
               if (!userId) return;
-  
+
               await remove(ref(db, `users/${userId}/collections/${collectionTitle}`));
               console.log(`✅ ${collectionTitle} filtresi ve snapleri silindi.`);
             } catch (err) {
@@ -47,6 +53,7 @@ export default function UserProfileScreen({ route }) {
       ]
     );
   };
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       const db = getDatabase();
@@ -55,6 +62,31 @@ export default function UserProfileScreen({ route }) {
         const snapshot = await get(infoRef);
         if (snapshot.exists()) {
           setProfile(snapshot.val());
+        }
+        // Admin mesajı kontrolü
+        if (userId === currentUserId) {
+          // Admin Message
+          const adminMsgRef = ref(db, `users/${userId}/adminMessage`);
+          const adminMsgSnap = await get(adminMsgRef);
+          if (adminMsgSnap.exists()) {
+            setAdminMessage(adminMsgSnap.val());
+            setModalContent(adminMsgSnap.val().message);
+            setShowAdminModal(true);
+          }
+          // Admin Warnings
+          const adminWarnRef = ref(db, `users/${userId}/adminWarnings`);
+          const adminWarnSnap = await get(adminWarnRef);
+          if (adminWarnSnap.exists()) {
+            const warnings = Object.values(adminWarnSnap.val());
+            if (warnings.length > 0) {
+              setAdminWarnings(warnings);
+              const lastWarning = warnings[warnings.length - 1];
+              if (lastWarning && typeof lastWarning === 'object' && 'message' in lastWarning) {
+                setModalContent(String((lastWarning as any).message));
+                setShowAdminModal(true);
+              }
+            }
+          }
         }
       } catch (e) {
         console.warn('Profil bilgileri alınamadı:', e);
@@ -83,36 +115,51 @@ export default function UserProfileScreen({ route }) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Image
-        source={{ uri: profile.profileImage || 'https://default-image.com/default.png' }}
-        style={styles.profileImage}
-      />
-      <Text style={styles.name}>{profile.name || 'İsim yok'}</Text>
-      <Text style={styles.email}>{profile.email || ''}</Text>
-      {userId === currentUserId && <Text style={styles.ownerTag}>Bu sensin! 👀</Text>}
-      <View style={styles.infoSection}>
-        <Text style={styles.label}>Hakkında</Text>
-        <Text style={styles.about}>{profile.aboutMe || 'Hakkında bilgisi girilmemiş.'}</Text>
-      </View>
-
-      {profile.city && (
-        <View style={styles.infoSection}>
-          <Text style={styles.label}>Şehir</Text>
-          <Text style={styles.about}>{profile.city}</Text>
+    <>
+      <Modal
+        visible={showAdminModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAdminModal(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 16, maxWidth: 320 }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#C67AFF', marginBottom: 8 }}>Admin Uyarısı</Text>
+            <Text style={{ color: '#333', marginBottom: 16 }}>{modalContent}</Text>
+            <Button title="Kapat" onPress={() => setShowAdminModal(false)} color="#C67AFF" />
+          </View>
         </View>
-      )}
-
-      {profile.interests && (
+      </Modal>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Image
+          source={{ uri: profile.profileImage || 'https://default-image.com/default.png' }}
+          style={styles.profileImage}
+        />
+        <Text style={styles.name}>{profile.name || 'İsim yok'}</Text>
+        <Text style={styles.email}>{profile.email || ''}</Text>
+        {userId === currentUserId && <Text style={styles.ownerTag}>Bu sensin! 👀</Text>}
         <View style={styles.infoSection}>
-          <Text style={styles.label}>İlgi Alanları</Text>
-          <Text style={styles.about}>{profile.interests}</Text>
+          <Text style={styles.label}>Hakkında</Text>
+          <Text style={styles.about}>{profile.aboutMe || 'Hakkında bilgisi girilmemiş.'}</Text>
         </View>
-      )}
-    </ScrollView>
+
+        {profile.city && (
+          <View style={styles.infoSection}>
+            <Text style={styles.label}>Şehir</Text>
+            <Text style={styles.about}>{profile.city}</Text>
+          </View>
+        )}
+
+        {profile.interests && (
+          <View style={styles.infoSection}>
+            <Text style={styles.label}>İlgi Alanları</Text>
+            <Text style={styles.about}>{profile.interests}</Text>
+          </View>
+        )}
+      </ScrollView>
+    </>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
