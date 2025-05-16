@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList,Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { getDatabase, ref, onValue,set,push } from 'firebase/database';
+import { View, Text, FlatList, Image, TouchableOpacity, StyleSheet, TextInput, Linking } from 'react-native';
+import { getDatabase, ref, onValue, set, push } from 'firebase/database';
 import { getAuth } from 'firebase/auth'; 
-import { TextInput } from 'react-native';
+
 export default function JobsScreen() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [tab, setTab] = useState<'jobs' | 'applied'>('jobs');
@@ -12,6 +12,7 @@ export default function JobsScreen() {
   const [user, setUser] = useState<any>(null);
   const [userType, setUserType] = useState('');
   const [filterLevel, setFilterLevel] = useState<'All' | 'Junior' | 'Mid' | 'Senior'>('All');
+
   const handleApply = async (item: any) => {
     const auth = getAuth();
     const currentUser = auth.currentUser;
@@ -68,6 +69,7 @@ export default function JobsScreen() {
       alert("Application submitted successfully!");
     }, { onlyOnce: true });
   };
+
   useEffect(() => {
     const db = getDatabase();
     const usersRef = ref(db, 'users');
@@ -95,21 +97,23 @@ export default function JobsScreen() {
       setJobs(jobList);
     });
   }, []);
+
   const filteredJobs = jobs
-  .filter((job) => {
-    // Seviye filtresi
-    if (filterLevel !== 'All' && job.level?.toLowerCase() !== filterLevel.toLowerCase()) {
-      return false;
-    }
+    .filter((job) => {
+      // Seviye filtresi
+      if (filterLevel !== 'All' && job.level?.toLowerCase() !== filterLevel.toLowerCase()) {
+        return false;
+      }
 
-    // Arama filtresi
-    const search = searchText.toLowerCase();
-    const jobTitle = job.position?.toLowerCase() || '';
-    const company = job.companyName?.toLowerCase() || '';
+      // Arama filtresi
+      const search = searchText.toLowerCase();
+      const jobTitle = job.position?.toLowerCase() || '';
+      const company = job.companyName?.toLowerCase() || '';
 
-    return jobTitle.includes(search) || company.includes(search);
-  })
-  .slice(0, 10); // max 10 iş
+      return jobTitle.includes(search) || company.includes(search);
+    })
+    .slice(0, 10); // max 10 iş
+
   useEffect(() => {
     if (user?.uid) {
       const db = getDatabase();
@@ -125,6 +129,7 @@ export default function JobsScreen() {
       });
     }
   }, [user]);
+
   useEffect(() => {
     const auth = getAuth();
     const currentUser = auth.currentUser;
@@ -138,7 +143,6 @@ export default function JobsScreen() {
     }
   }, []);
 
-  
   const handleAnswer = async (applicant: any, status: 'accepted' | 'rejected') => {
     const db = getDatabase();
     const refPath = `users/${applicant.userId}/appliedJobs`;
@@ -179,34 +183,59 @@ export default function JobsScreen() {
       ? Object.keys(item.jobapplications).length
       : 0;
   
-      return (
-        <View style={styles.cardContainer}>
-          {/* Üst görsel + logo */}
-          <View style={styles.headerSection}>
+    // formsLink kontrolü
+    const hasForm = !!item.formsLink;
+  
+    // Apply with Test butonuna tıklandığında
+    const handleApplyWithTest = async () => {
+      await handleApply(item);
+      if (item.formsLink) {
+        Linking.openURL(item.formsLink);
+      }
+    };
+  
+    return (
+      <View style={styles.cardContainer}>
+        {/* Üst görsel + logo */}
+        <View style={styles.headerSection}>
+          <Image
+            source={{ uri: item.companyBanner || item.companyLogo }}
+            style={styles.bannerImage}
+          />
+          <View style={styles.logoContainer}>
             <Image
-              source={{ uri: item.companyBanner || item.companyLogo }}
-              style={styles.bannerImage}
+              source={{ uri: item.companyLogo }}
+              style={styles.logoImage}
             />
-            <View style={styles.logoContainer}>
-              <Image
-                source={{ uri: item.companyLogo }}
-                style={styles.logoImage}
-              />
-            </View>
           </View>
-      
-          {/* İçerik */}
-          <View style={styles.detailsSection}>
-            <Text style={styles.jobTitle}>{item.position}</Text>
-            <Text style={styles.companyText}>{item.companyName} • {item.level} • {item.location}</Text>
-            <Text numberOfLines={2} style={styles.descText}>{item.description}</Text>
-      
-            {/* Başvuru sayısı */}
-            <Text style={styles.appliedCount}>
-              {applicationCount} {applicationCount === 1 ? 'person' : 'people'} applied
-            </Text>
-      
-            {/* Buton (kartın en altında) */}
+        </View>
+    
+        {/* İçerik */}
+        <View style={styles.detailsSection}>
+          <Text style={styles.jobTitle}>{item.position}</Text>
+          <Text style={styles.companyText}>{item.companyName} • {item.level} • {item.location}</Text>
+          <Text numberOfLines={2} style={styles.descText}>{item.description}</Text>
+    
+          {/* Başvuru sayısı */}
+          <Text style={styles.appliedCount}>
+            {applicationCount} {applicationCount === 1 ? 'person' : 'people'} applied
+          </Text>
+    
+          {/* Apply veya Apply with Test butonu */}
+          {hasForm ? (
+            <TouchableOpacity
+              disabled={alreadyApplied}
+              style={[
+                styles.applyBtn,
+                alreadyApplied && { backgroundColor: '#ccc' },
+              ]}
+              onPress={handleApplyWithTest}
+            >
+              <Text style={{ color: '#000', textAlign: 'center' }}>
+                {alreadyApplied ? 'Applied' : 'Apply with Test'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
             <TouchableOpacity
               disabled={alreadyApplied}
               style={[
@@ -219,9 +248,10 @@ export default function JobsScreen() {
                 {alreadyApplied ? 'Applied' : 'Apply'}
               </Text>
             </TouchableOpacity>
-          </View>
+          )}
         </View>
-      );
+      </View>
+    );
   };
 
   return (
@@ -237,87 +267,86 @@ export default function JobsScreen() {
           </Text>
         </TouchableOpacity>
         {userType === 'companies' ? (
-  <TouchableOpacity
-    style={[styles.tabButton, tab === 'applied' && styles.tabSelected]}
-    onPress={() => setTab('applied')}
-  >
-    <Text style={[styles.tabText, tab === 'applied' && styles.tabTextSelected]}>
-      People Applies
-    </Text>
-  </TouchableOpacity>
-) : (
-  <TouchableOpacity
-    style={[styles.tabButton, tab === 'applied' && styles.tabSelected]}
-    onPress={() => setTab('applied')}
-  >
-    <Text style={[styles.tabText, tab === 'applied' && styles.tabTextSelected]}>
-      Applied Jobs
-    </Text>
-  </TouchableOpacity>
-)}
-
+          <TouchableOpacity
+            style={[styles.tabButton, tab === 'applied' && styles.tabSelected]}
+            onPress={() => setTab('applied')}
+          >
+            <Text style={[styles.tabText, tab === 'applied' && styles.tabTextSelected]}>
+              People Applies
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.tabButton, tab === 'applied' && styles.tabSelected]}
+            onPress={() => setTab('applied')}
+          >
+            <Text style={[styles.tabText, tab === 'applied' && styles.tabTextSelected]}>
+              Applied Jobs
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
       <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
-  <TextInput
-    placeholder="Search by job title or company"
-    value={searchText}
-    onChangeText={setSearchText}
-    style={{
-      backgroundColor: '#fff',
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderRadius: 10,
-      fontSize: 14,
-      shadowColor: '#000',
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 2,
-    }}
-  />
-</View>
+        <TextInput
+          placeholder="Search by job title or company"
+          value={searchText}
+          onChangeText={setSearchText}
+          style={{
+            backgroundColor: '#fff',
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderRadius: 10,
+            fontSize: 14,
+            shadowColor: '#000',
+            shadowOpacity: 0.05,
+            shadowRadius: 4,
+            elevation: 2,
+          }}
+        />
+      </View>
       <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 12 }}>
-  {['All', 'Junior', 'Mid', 'Senior'].map((level) => (
-    <TouchableOpacity
-      key={level}
-      onPress={() => setFilterLevel(level as any)}
-      style={{
-        backgroundColor: filterLevel === level ? '#628EA0' : '#ccc',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        marginHorizontal: 4,
-      }}
-    >
-      <Text style={{ color: filterLevel === level ? '#fff' : '#000', fontWeight: '600' }}>
-        {level}
-      </Text>
-    </TouchableOpacity>
-  ))}
-</View>
+        {['All', 'Junior', 'Mid', 'Senior'].map((level) => (
+          <TouchableOpacity
+            key={level}
+            onPress={() => setFilterLevel(level as any)}
+            style={{
+              backgroundColor: filterLevel === level ? '#628EA0' : '#ccc',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 20,
+              marginHorizontal: 4,
+            }}
+          >
+            <Text style={{ color: filterLevel === level ? '#fff' : '#000', fontWeight: '600' }}>
+              {level}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       {/* Job List */}
       {tab === 'jobs' ? (
         <FlatList
-  data={filteredJobs}
-  keyExtractor={(_, index) => index.toString()}
-  renderItem={renderJobItem}
-  contentContainerStyle={{ padding: 16 }}
-/>
+          data={filteredJobs}
+          keyExtractor={(_, index) => index.toString()}
+          renderItem={renderJobItem}
+          contentContainerStyle={{ padding: 16 }}
+        />
       ) : userType === 'companies' ? (
         <FlatList
-        data={jobs
-          .filter(job => job.companyId === user?.uid) // 🔒 Sadece kendi ilanları
-          .flatMap(job =>
-            Object.values(job.jobapplications || {}).map(application => ({
-              ...application,
-              jobId: job.jobIndex,
-              companyId: job.companyId,
-              jobTitle: job.position,
-              jobLevel: job.level,
-              jobLocation: job.location,
-              jobCompany: job.companyName,
-            }))
-          )}
+          data={jobs
+            .filter(job => job.companyId === user?.uid) // 🔒 Sadece kendi ilanları
+            .flatMap(job =>
+              Object.values(job.jobapplications || {}).map(application => ({
+                ...application,
+                jobId: job.jobIndex,
+                companyId: job.companyId,
+                jobTitle: job.position,
+                jobLevel: job.level,
+                jobLocation: job.location,
+                jobCompany: job.companyName,
+              }))
+            )}
           keyExtractor={(_, index) => index.toString()}
           renderItem={({ item }) => {
             const isExpanded = expandedCard === item.userId;
@@ -349,56 +378,56 @@ export default function JobsScreen() {
                 </TouchableOpacity>
           
                 {isExpanded && (
-  <View style={styles.expandedSection}>
-    <Text style={styles.sectionTitle}>🎓 Education</Text>
-    {item.educations?.map((edu, i) => (
-      <View key={i} style={styles.detailBox}>
-        <Text style={styles.detailLabel}>{edu.schoolName}</Text>
-        <Text style={styles.detailSub}>{edu.degreeType} • {edu.department}</Text>
-      </View>
-    ))}
+                  <View style={styles.expandedSection}>
+                    <Text style={styles.sectionTitle}>🎓 Education</Text>
+                    {item.educations?.map((edu, i) => (
+                      <View key={i} style={styles.detailBox}>
+                        <Text style={styles.detailLabel}>{edu.schoolName}</Text>
+                        <Text style={styles.detailSub}>{edu.degreeType} • {edu.department}</Text>
+                      </View>
+                    ))}
 
-    <Text style={styles.sectionTitle}>💼 Experience</Text>
-    {item.experiences?.map((exp, i) => (
-      <View key={i} style={styles.detailBox}>
-        <Text style={styles.detailLabel}>{exp.company}</Text>
-        <Text style={styles.detailSub}>{exp.role} • {exp.employmentType}</Text>
-      </View>
-    ))}
+                    <Text style={styles.sectionTitle}>💼 Experience</Text>
+                    {item.experiences?.map((exp, i) => (
+                      <View key={i} style={styles.detailBox}>
+                        <Text style={styles.detailLabel}>{exp.company}</Text>
+                        <Text style={styles.detailSub}>{exp.role} • {exp.employmentType}</Text>
+                      </View>
+                    ))}
 
-    <Text style={styles.sectionTitle}>🛠 Projects</Text>
-    {item.projects?.map((proj, i) => (
-      <View key={i} style={styles.detailBox}>
-        <Text style={styles.detailLabel}>{proj.projectName}</Text>
-        <Text style={styles.detailSub}>{proj.description}</Text>
-      </View>
-    ))}
+                    <Text style={styles.sectionTitle}>🛠 Projects</Text>
+                    {item.projects?.map((proj, i) => (
+                      <View key={i} style={styles.detailBox}>
+                        <Text style={styles.detailLabel}>{proj.projectName}</Text>
+                        <Text style={styles.detailSub}>{proj.description}</Text>
+                      </View>
+                    ))}
 
-    <Text style={styles.sectionTitle}>📄 Certificates</Text>
-    {item.certificates?.map((cert, i) => (
-      <View key={i} style={styles.detailBox}>
-        <Text style={styles.detailLabel}>{cert.certificateName}</Text>
-        <Text style={styles.detailSub}>{cert.organization}</Text>
-      </View>
-    ))}
+                    <Text style={styles.sectionTitle}>📄 Certificates</Text>
+                    {item.certificates?.map((cert, i) => (
+                      <View key={i} style={styles.detailBox}>
+                        <Text style={styles.detailLabel}>{cert.certificateName}</Text>
+                        <Text style={styles.detailSub}>{cert.organization}</Text>
+                      </View>
+                    ))}
 
-    {/* Accept / Reject buttons */}
-    <View style={styles.buttonRow}>
-      <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: '#EF9A9A' }]}
-        onPress={() => handleAnswer(item, 'rejected')}
-      >
-        <Text style={styles.buttonText}>Reject</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.actionButton, { backgroundColor: '#A5D6A7' }]}
-        onPress={() => handleAnswer(item, 'accepted')}
-      >
-        <Text style={styles.buttonText}>Accept</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-)}
+                    {/* Accept / Reject buttons */}
+                    <View style={styles.buttonRow}>
+                      <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: '#EF9A9A' }]}
+                        onPress={() => handleAnswer(item, 'rejected')}
+                      >
+                        <Text style={styles.buttonText}>Reject</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: '#A5D6A7' }]}
+                        onPress={() => handleAnswer(item, 'accepted')}
+                      >
+                        <Text style={styles.buttonText}>Accept</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
               </View>
             );
           }}
@@ -449,7 +478,6 @@ export default function JobsScreen() {
           contentContainerStyle={{ padding: 16 }}
         />
       )}
-      
     </View>
   );
 }
