@@ -305,7 +305,9 @@ export default function JobsScreen() {
 />
       ) : userType === 'companies' ? (
         <FlatList
-          data={jobs.flatMap(job =>
+        data={jobs
+          .filter(job => job.companyId === user?.uid) // 🔒 Sadece kendi ilanları
+          .flatMap(job =>
             Object.values(job.jobapplications || {}).map(application => ({
               ...application,
               jobId: job.jobIndex,
