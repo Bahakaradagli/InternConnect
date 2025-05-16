@@ -143,6 +143,7 @@ export default function JobsScreen() {
     }
   }, []);
 
+
   const handleAnswer = async (applicant: any, status: 'accepted' | 'rejected') => {
     const db = getDatabase();
     const refPath = `users/${applicant.userId}/appliedJobs`;
@@ -158,7 +159,26 @@ export default function JobsScreen() {
           value.companyId === applicant.companyId
         ) {
           const updateRef = ref(db, `${refPath}/${key}/answer`);
-          set(updateRef, status); // 🔥 işte burada answer yazılıyor
+          set(updateRef, status);
+  
+          // 💥 ŞİMDİ: jobs state'ini güncelle
+          setJobs((prevJobs) =>
+            prevJobs.map((job) => {
+              if (job.companyId === applicant.companyId && job.jobIndex === applicant.jobId) {
+                return {
+                  ...job,
+                  jobapplications: {
+                    ...job.jobapplications,
+                    [applicant.userId]: {
+                      ...(job.jobapplications?.[applicant.userId] || {}),
+                      answer: status, // ekle veya güncelle
+                    },
+                  },
+                };
+              }
+              return job;
+            })
+          );
         }
       });
     }, { onlyOnce: true });
@@ -378,56 +398,70 @@ export default function JobsScreen() {
                 </TouchableOpacity>
           
                 {isExpanded && (
-                  <View style={styles.expandedSection}>
-                    <Text style={styles.sectionTitle}>🎓 Education</Text>
-                    {item.educations?.map((edu, i) => (
-                      <View key={i} style={styles.detailBox}>
-                        <Text style={styles.detailLabel}>{edu.schoolName}</Text>
-                        <Text style={styles.detailSub}>{edu.degreeType} • {edu.department}</Text>
-                      </View>
-                    ))}
+  <View style={styles.expandedSection}>
+    <Text style={styles.sectionTitle}>🎓 Education</Text>
+    {item.educations?.map((edu, i) => (
+      <View key={i} style={styles.detailBox}>
+        <Text style={styles.detailLabel}>{edu.schoolName}</Text>
+        <Text style={styles.detailSub}>{edu.degreeType} • {edu.department}</Text>
+      </View>
+    ))}
 
-                    <Text style={styles.sectionTitle}>💼 Experience</Text>
-                    {item.experiences?.map((exp, i) => (
-                      <View key={i} style={styles.detailBox}>
-                        <Text style={styles.detailLabel}>{exp.company}</Text>
-                        <Text style={styles.detailSub}>{exp.role} • {exp.employmentType}</Text>
-                      </View>
-                    ))}
+    <Text style={styles.sectionTitle}>💼 Experience</Text>
+    {item.experiences?.map((exp, i) => (
+      <View key={i} style={styles.detailBox}>
+        <Text style={styles.detailLabel}>{exp.company}</Text>
+        <Text style={styles.detailSub}>{exp.role} • {exp.employmentType}</Text>
+      </View>
+    ))}
 
-                    <Text style={styles.sectionTitle}>🛠 Projects</Text>
-                    {item.projects?.map((proj, i) => (
-                      <View key={i} style={styles.detailBox}>
-                        <Text style={styles.detailLabel}>{proj.projectName}</Text>
-                        <Text style={styles.detailSub}>{proj.description}</Text>
-                      </View>
-                    ))}
+    <Text style={styles.sectionTitle}>🛠 Projects</Text>
+    {item.projects?.map((proj, i) => (
+      <View key={i} style={styles.detailBox}>
+        <Text style={styles.detailLabel}>{proj.projectName}</Text>
+        <Text style={styles.detailSub}>{proj.description}</Text>
+      </View>
+    ))}
 
-                    <Text style={styles.sectionTitle}>📄 Certificates</Text>
-                    {item.certificates?.map((cert, i) => (
-                      <View key={i} style={styles.detailBox}>
-                        <Text style={styles.detailLabel}>{cert.certificateName}</Text>
-                        <Text style={styles.detailSub}>{cert.organization}</Text>
-                      </View>
-                    ))}
+    <Text style={styles.sectionTitle}>📄 Certificates</Text>
+    {item.certificates?.map((cert, i) => (
+      <View key={i} style={styles.detailBox}>
+        <Text style={styles.detailLabel}>{cert.certificateName}</Text>
+        <Text style={styles.detailSub}>{cert.organization}</Text>
+      </View>
+    ))}
 
-                    {/* Accept / Reject buttons */}
-                    <View style={styles.buttonRow}>
-                      <TouchableOpacity
-                        style={[styles.actionButton, { backgroundColor: '#EF9A9A' }]}
-                        onPress={() => handleAnswer(item, 'rejected')}
-                      >
-                        <Text style={styles.buttonText}>Reject</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.actionButton, { backgroundColor: '#A5D6A7' }]}
-                        onPress={() => handleAnswer(item, 'accepted')}
-                      >
-                        <Text style={styles.buttonText}>Accept</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
+    {/* ✅ Answer info or buttons */}
+    {item.answer ? (
+      <Text
+        style={{
+          marginTop: 12,
+          fontStyle: 'italic',
+          fontWeight: '600',
+          color: item.answer === 'accepted' ? '#2E7D32' : '#C62828',
+          textAlign: 'center',
+        }}
+      >
+        You decided to {item.answer}
+      </Text>
+    ) : (
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: '#EF9A9A' }]}
+          onPress={() => handleAnswer(item, 'rejected')}
+        >
+          <Text style={styles.buttonText}>Reject</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: '#A5D6A7' }]}
+          onPress={() => handleAnswer(item, 'accepted')}
+        >
+          <Text style={styles.buttonText}>Accept</Text>
+        </TouchableOpacity>
+      </View>
+    )}
+  </View>
+)}
               </View>
             );
           }}
