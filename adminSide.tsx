@@ -236,14 +236,6 @@ export default function AdminSide() {
         placeholderTextColor="#888"
       />
       <View style={styles.adminActionsRow}>
-        <TouchableOpacity style={styles.adminActionButton} onPress={handleShowSpams}>
-          <Ionicons name="alert-circle" size={22} color="#fff" />
-          <Text style={styles.adminActionText}>View Spams</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.adminActionButton} onPress={() => setShowSpams(false)}>
-          <Ionicons name="people" size={22} color="#fff" />
-          <Text style={styles.adminActionText}>All Users</Text>
-        </TouchableOpacity>
       </View>
       {loading ? (
         <ActivityIndicator size="large" color="#628EA0" style={{ marginTop: 40 }} />
